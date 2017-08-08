@@ -12,13 +12,16 @@ namespace Xamarin.Forms.Platform.GTK.Packagers
 
         protected override void OnChildAdded(VisualElement view)
         {
-            var viewRenderer = Platform.CreateRenderer(view);
-            Platform.SetRenderer(view, viewRenderer);
+            Gtk.Application.Invoke(delegate
+            {
+                var viewRenderer = Platform.CreateRenderer(view);
+                Platform.SetRenderer(view, viewRenderer);
 
-            var fixedControl = Renderer.Control;
-            fixedControl.Add(viewRenderer.Container);
+                var fixedControl = Renderer.Control;
+                fixedControl.Add(viewRenderer.Container);
 
-            viewRenderer.Container.ShowAll();
+                viewRenderer.Container.ShowAll();
+            });
         }
 
         protected override void OnChildRemoved(VisualElement view)

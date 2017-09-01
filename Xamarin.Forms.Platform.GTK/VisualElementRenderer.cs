@@ -149,7 +149,7 @@ namespace Xamarin.Forms.Platform.GTK
             base.OnSizeAllocated(allocation);
 
             Rectangle bounds = Element.Bounds;
-            Container.MoveTo((int)bounds.X, (int)bounds.Y);
+            Container.MoveTo((int)bounds.X + Element.TranslationX, (int)bounds.Y + Element.TranslationY);
 
             for (var i = 0; i < ElementController.LogicalChildren.Count; i++)
             {
@@ -165,7 +165,7 @@ namespace Xamarin.Forms.Platform.GTK
                         double height = child.Bounds.Height >= -1 ? child.Bounds.Height : 0;
 
                         renderer.Container.SetSize(width, height);
-                        renderer.Container.MoveTo(child.Bounds.X, child.Bounds.Y);
+                        renderer.Container.MoveTo(child.Bounds.X + child.TranslationX, child.Bounds.Y + child.TranslationY);
                     }
                 }
             }

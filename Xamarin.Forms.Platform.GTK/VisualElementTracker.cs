@@ -1,4 +1,5 @@
-﻿using Gtk;
+﻿using Gdk;
+using Gtk;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +18,10 @@ namespace Xamarin.Forms.Platform.GTK
         private TElement _element;
         private EventBox _container;
         private bool _invalidateArrangeNeeded;
+        private bool _isPanning;
+        private bool _wasPanGestureStartedSent;
+        private double _initialPosX;
+        private double _initialPosY;
 
         private readonly NotifyCollectionChangedEventHandler _collectionChangedHandler;
 
@@ -38,6 +43,9 @@ namespace Xamarin.Forms.Platform.GTK
                 if (_container != null)
                 {
                     _container.ButtonPressEvent -= OnContainerButtonPressEvent;
+                    _container.ButtonPressEvent -= OnContainerPanStartEvent;
+                    _container.WidgetEvent -= OnContainerPanMoveEvent;
+                    _container.ButtonReleaseEvent -= OnContainerPanEndEvent;
                 }
 
                 _container = value;
@@ -150,6 +158,9 @@ namespace Xamarin.Forms.Platform.GTK
             if (_container != null)
             {
                 _container.ButtonPressEvent -= OnContainerButtonPressEvent;
+                _container.ButtonPressEvent -= OnContainerPanStartEvent;
+                _container.WidgetEvent -= OnContainerPanMoveEvent;
+                _container.ButtonReleaseEvent -= OnContainerPanEndEvent;
             }
 
             if (_element != null)
@@ -250,6 +261,9 @@ namespace Xamarin.Forms.Platform.GTK
                 return;
 
             _container.ButtonPressEvent -= OnContainerButtonPressEvent;
+            _container.ButtonPressEvent -= OnContainerPanStartEvent;
+            _container.WidgetEvent -= OnContainerPanMoveEvent;
+            _container.ButtonReleaseEvent -= OnContainerPanEndEvent;
 
             if (gestures.GetGesturesFor<TapGestureRecognizer>(g => g.NumberOfTapsRequired == 1).Any())
             {
@@ -263,11 +277,15 @@ namespace Xamarin.Forms.Platform.GTK
                 }
             }
 
-            bool hasPinchGesture = gestures.GetGesturesFor<PinchGestureRecognizer>().GetEnumerator().MoveNext();
             bool hasPanGesture = gestures.GetGesturesFor<PanGestureRecognizer>().GetEnumerator().MoveNext();
 
-            if (!hasPinchGesture && !hasPanGesture)
-                return;
+            if (hasPanGesture)
+            {
+                _container.Events = EventMask.ButtonPressMask | EventMask.ButtonReleaseMask | EventMask.PointerMotionMask;
+                _container.ButtonPressEvent += OnContainerPanStartEvent;
+                _container.WidgetEvent += OnContainerPanMoveEvent;
+                _container.ButtonReleaseEvent += OnContainerPanEndEvent;
+            }
         }
 
         private void MaybeInvalidate()
@@ -347,9 +365,7 @@ namespace Xamarin.Forms.Platform.GTK
         private void OnContainerButtonPressEvent(object o, ButtonPressEventArgs args)
         {
             if (args.Event.Button != 1)
-            {
                 return;
-            }
 
             var view = Element as View;
 
@@ -374,7 +390,111 @@ namespace Xamarin.Forms.Platform.GTK
             }
         }
 
+        private void OnContainerPanStartEvent(object o, ButtonPressEventArgs args)
+        {
+            if (args.Event.Button != 1)
+                return;
+
+            var view = Element as View;
+
+            if (view == null)
+                return;
+
+            _initialPosX = args.Event.X;
+            _initialPosY = args.Event.Y;
+
+            _wasPanGestureStartedSent = false;
+            _isPanning = true;
+        }
+
+        private void OnContainerPanMoveEvent(object o, WidgetEventArgs args)
+        {
+            if (!_isPanning)
+                return;
+
+            if (args.Event.Type == EventType.MotionNotify)
+            {
+                var eventMotion = args.Event as EventMotion;
+
+                if (eventMotion != null)
+                {
+                    int translationX = 0;
+                    int translationY = 0;
+                    ModifierType state;
+
+                    eventMotion.Window.GetPointer(out translationX, out translationY, out state);
+
+                    if ((state & ModifierType.Button1Mask) == 0)
+                        return;
+
+                    var view = Element as View;
+
+                    if (view == null)
+                        return;
+
+                    HandlePan(translationX - _initialPosX, translationY - _initialPosY, view);
+                }
+            }
+        }
+
+        private void OnContainerPanEndEvent(object o, ButtonReleaseEventArgs args)
+        {
+            var view = Element as View;
+
+            if (view == null)
+                return;
+
+            PanComplete(true);
+        }
+
+        private void HandlePan(double translationX, double translationY, View view)
+        {
+            if (view == null)
+                return;
+
+            _isPanning = true;
+
+            foreach (PanGestureRecognizer recognizer in view.GestureRecognizers.GetGesturesFor<PanGestureRecognizer>().Where(g => g.TouchPoints == 1))
+            {
+                if (!_wasPanGestureStartedSent)
+                {
+                    recognizer.SendPanStarted(view, Application.Current.PanGestureId);
+                }
+                recognizer.SendPan(view, translationX, translationY, Application.Current.PanGestureId);
+            }
+
+            _wasPanGestureStartedSent = true;
+        }
+
+        private void PanComplete(bool success)
+        {
+            var view = Element as View;
+
+            if (view == null || !_isPanning)
+                return;
+
+            foreach (PanGestureRecognizer recognizer in view.GestureRecognizers.GetGesturesFor<PanGestureRecognizer>().Where(g => g.TouchPoints == 1))
+            {
+                if (success)
+                {
+                    recognizer.SendPanCompleted(view, Application.Current.PanGestureId);
+                }
+                else
+                {
+                    recognizer.SendPanCanceled(view, Application.Current.PanGestureId);
+                }
+            }
+
+            Application.Current.PanGestureId++;
+            _isPanning = false;
+        }
+
         private void OnControlButtonPressEvent(object o, ButtonPressEventArgs args)
+        {
+            args.RetVal = true;
+        }
+
+        private void OnControlButtonReleaseEvent(object o, ButtonReleaseEventArgs args)
         {
             args.RetVal = true;
         }

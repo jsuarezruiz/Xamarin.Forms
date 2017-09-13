@@ -21,7 +21,7 @@ using Xamarin.Forms.Platform.WinRT;
 
 namespace Xamarin.Forms
 {
-	public static class Forms
+	public static partial class Forms
 	{
 		const string LogFormat = "[{0}] {1}";
 
@@ -30,6 +30,8 @@ namespace Xamarin.Forms
 		public static bool IsInitialized { get; private set; }
 
 #if WINDOWS_UWP
+
+		
 		public static void Init(IActivatedEventArgs launchActivatedEventArgs, IEnumerable<Assembly> rendererAssemblies = null)
 #else
 		public static void Init(IActivatedEventArgs launchActivatedEventArgs)

@@ -56,7 +56,7 @@
         <summary>Gets the object that developers use to register or unregister application links.</summary>
         <value>The object that developers use to register or unregister application links.</value>
         <remarks>It is not possible to unregister an app link on the Android platform.</remarks>
-        <related type="article" href="https://developer.xamarin.com/guides/xamarin-forms/working-with/deep-linking/">Application Indexing and Deep Linking</related>
+        <related type="article" href="https://developer.xamarin.com/guides/xamarin-forms/platform-features/deep-linking/">Application Indexing and Deep Linking</related>
       </Docs>
     </Member>
     <Member MemberName="ClearCurrent">
@@ -119,7 +119,7 @@
         <Parameter Name="element" Type="Xamarin.Forms.Element" />
       </Parameters>
       <Docs>
-        <param name="element">To be added.</param>
+        <param name="element">For internal use by the Xamarin.Forms platform.</param>
         <summary>For internal use by the Xamarin.Forms platform.</summary>
         <returns>To be added.</returns>
         <remarks>To be added.</remarks>
@@ -280,7 +280,7 @@
         <param name="uri">The URI for the request.</param>
         <summary>App developers override this method to respond when the user initiates an app link request.</summary>
         <remarks>To be added.</remarks>
-        <related type="article" href="https://developer.xamarin.com/guides/xamarin-forms/working-with/deep-linking/">Application Indexing and Deep Linking</related>
+        <related type="article" href="https://developer.xamarin.com/guides/xamarin-forms/platform-features/deep-linking/">Application Indexing and Deep Linking</related>
       </Docs>
     </Member>
     <Member MemberName="OnParentSet">
@@ -404,6 +404,22 @@
         <remarks>To be added.</remarks>
       </Docs>
     </Member>
+    <Member MemberName="Quit">
+      <MemberSignature Language="C#" Value="public void Quit ();" />
+      <MemberSignature Language="ILAsm" Value=".method public hidebysig instance void Quit() cil managed" />
+      <MemberType>Method</MemberType>
+      <AssemblyInfo>
+        <AssemblyVersion>2.0.0.0</AssemblyVersion>
+      </AssemblyInfo>
+      <ReturnValue>
+        <ReturnType>System.Void</ReturnType>
+      </ReturnValue>
+      <Parameters />
+      <Docs>
+        <summary>To be added.</summary>
+        <remarks>To be added.</remarks>
+      </Docs>
+    </Member>
     <Member MemberName="Resources">
       <MemberSignature Language="C#" Value="public Xamarin.Forms.ResourceDictionary Resources { get; set; }" />
       <MemberSignature Language="ILAsm" Value=".property instance class Xamarin.Forms.ResourceDictionary Resources" />
@@ -439,7 +455,7 @@
           <AttributeName>System.Diagnostics.DebuggerStepThrough</AttributeName>
         </Attribute>
         <Attribute>
-          <AttributeName>System.Runtime.CompilerServices.AsyncStateMachine(typeof(Xamarin.Forms.Application/&lt;SavePropertiesAsync&gt;d__52))</AttributeName>
+          <AttributeName>System.Runtime.CompilerServices.AsyncStateMachine(typeof(Xamarin.Forms.Application/&lt;SavePropertiesAsync&gt;d__53))</AttributeName>
         </Attribute>
       </Attributes>
       <ReturnValue>
@@ -471,7 +487,7 @@
         <Parameter Name="uri" Type="System.Uri" />
       </Parameters>
       <Docs>
-        <param name="uri">To be added.</param>
+        <param name="uri">For internal use by the Xamarin.Forms platform.</param>
         <summary>For internal use by the Xamarin.Forms platform.</summary>
         <remarks>To be added.</remarks>
       </Docs>
@@ -559,7 +575,7 @@
         <Parameter Name="provider" Type="Xamarin.Forms.IAppIndexingProvider" />
       </Parameters>
       <Docs>
-        <param name="provider">To be added.</param>
+        <param name="provider">For internal use by the Xamarin.Forms platform.</param>
         <summary>For internal use by the Xamarin.Forms platform.</summary>
         <remarks>To be added.</remarks>
       </Docs>
@@ -583,7 +599,7 @@
         <Parameter Name="value" Type="Xamarin.Forms.Application" />
       </Parameters>
       <Docs>
-        <param name="value">To be added.</param>
+        <param name="value">For internal use by the Xamarin.Forms platform.</param>
         <summary>For internal use by the Xamarin.Forms platform.</summary>
         <remarks>To be added.</remarks>
       </Docs>

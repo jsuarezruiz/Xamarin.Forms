@@ -1,23 +1,19 @@
 using System;
 using System.ComponentModel;
 using Android.Content;
-using Android.Content.Res;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Support.V7.Widget;
 using Android.Util;
 using Android.Views;
 using Xamarin.Forms.Internals;
-using GlobalResource = Android.Resource;
 using AView = Android.Views.View;
-using AMotionEvent = Android.Views.MotionEvent;
 using AMotionEventActions = Android.Views.MotionEventActions;
 using static System.String;
-using Object = Java.Lang.Object;
 
 namespace Xamarin.Forms.Platform.Android.FastRenderers
 {
-	public class ButtonRenderer : AppCompatButton, IVisualElementRenderer, AView.IOnAttachStateChangeListener,
+	internal sealed class ButtonRenderer : AppCompatButton, IVisualElementRenderer, AView.IOnAttachStateChangeListener,
 		AView.IOnFocusChangeListener, IEffectControlProvider, AView.IOnClickListener, AView.IOnTouchListener
 	{
 		float _defaultFontSize;
@@ -25,22 +21,23 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 		Typeface _defaultTypeface;
 		int _imageHeight = -1;
 		bool _isDisposed;
-	    bool _inputTransparent;
-	    readonly Lazy<TextColorSwitcher> _textColorSwitcher;
-        readonly AutomationPropertiesProvider _automationPropertiesProvider;
+		bool _inputTransparent;
+		readonly Lazy<TextColorSwitcher> _textColorSwitcher;
+		readonly AutomationPropertiesProvider _automationPropertiesProvider;
 		readonly EffectControlProvider _effectControlProvider;
 		VisualElementTracker _tracker;
+		ButtonBackgroundTracker _backgroundTracker;
 
 		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 		public event EventHandler<PropertyChangedEventArgs> ElementPropertyChanged;
 
 		public ButtonRenderer() : base(Forms.Context)
 		{
-            _automationPropertiesProvider = new AutomationPropertiesProvider(this);
+			_automationPropertiesProvider = new AutomationPropertiesProvider(this);
 			_effectControlProvider = new EffectControlProvider(this);
-            _textColorSwitcher = new Lazy<TextColorSwitcher>(() => new TextColorSwitcher(TextColors));
+			_textColorSwitcher = new Lazy<TextColorSwitcher>(() => new TextColorSwitcher(TextColors));
 
-            Initialize();
+			Initialize();
 		}
 
 		public VisualElement Element => Button;
@@ -124,6 +121,11 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 				oldElement.PropertyChanged -= OnElementPropertyChanged;
 			}
 
+			if (_backgroundTracker == null)
+				_backgroundTracker = new ButtonBackgroundTracker(Button, this);
+			else
+				_backgroundTracker.Button = Button;
+
 			Color currentColor = oldElement?.BackgroundColor ?? Color.Default;
 			if (element.BackgroundColor != currentColor)
 			{
@@ -143,7 +145,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 			SendVisualElementInitialized(element, this);
 
 			EffectUtilities.RegisterEffectControlProvider(this, oldElement, element);
-			
+
 			Performance.Stop();
 		}
 
@@ -182,45 +184,57 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 				_automationPropertiesProvider?.Dispose();
 				_tracker?.Dispose();
 
+				_backgroundTracker?.Dispose();
+
 				if (Element != null)
 				{
 					Element.PropertyChanged -= OnElementPropertyChanged;
+
+					if (Platform.GetRenderer(Element) == this)
+						Element.ClearValue(Platform.RendererProperty);
 				}
 			}
 
 			base.Dispose(disposing);
 		}
 
-        public override bool OnTouchEvent(MotionEvent e)
-        {
-            if (!Enabled || (_inputTransparent && Enabled))
-                return false;
+		public override bool OnTouchEvent(MotionEvent e)
+		{
+			if (!Enabled || (_inputTransparent && Enabled))
+				return false;
 
-            return base.OnTouchEvent(e);
-        }
+			return base.OnTouchEvent(e);
+		}
 
-        protected virtual Size MinimumSize()
+		Size MinimumSize()
 		{
 			return new Size();
 		}
 
-		protected virtual void OnElementChanged(ElementChangedEventArgs<Button> e)
+		void OnElementChanged(ElementChangedEventArgs<Button> e)
 		{
-			if (e.NewElement != null)
+			if (e.OldElement != null)
 			{
-                UpdateFont();
-                UpdateText();
-                UpdateBitmap();
-                UpdateTextColor();
-                UpdateIsEnabled();
-			    UpdateInputTransparent();
-                UpdateBackgroundColor();
+				_backgroundTracker?.Reset();
+			}
+			if (e.NewElement != null && !_isDisposed)
+			{
+				this.EnsureId();
+
+				UpdateFont();
+				UpdateText();
+				UpdateBitmap();
+				UpdateTextColor();
+				UpdateIsEnabled();
+				UpdateInputTransparent();
+				UpdateBackgroundColor();
+				UpdateDrawable();
 			}
 
 			ElementChanged?.Invoke(this, new VisualElementChangedEventArgs(e.OldElement, e.NewElement));
 		}
 
-		protected virtual void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
+		void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			if (e.PropertyName == Button.TextProperty.PropertyName)
 			{
@@ -249,10 +263,6 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 			else if (e.PropertyName == VisualElement.InputTransparentProperty.PropertyName)
 			{
 				UpdateInputTransparent();
-            }
-			else if (e.PropertyName == VisualElement.BackgroundColorProperty.PropertyName)
-			{
-				UpdateBackgroundColor();
 			}
 
 			ElementPropertyChanged?.Invoke(this, e);
@@ -260,7 +270,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		protected override void OnLayout(bool changed, int l, int t, int r, int b)
 		{
-			if (Element == null)
+			if (Element == null || _isDisposed)
 			{
 				return;
 			}
@@ -277,90 +287,39 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 			base.OnLayout(changed, l, t, r, b);
 		}
 
-		protected void SetTracker(VisualElementTracker tracker)
+		void SetTracker(VisualElementTracker tracker)
 		{
 			_tracker = tracker;
 		}
 
-		protected void UpdateBackgroundColor()
+		void UpdateBackgroundColor()
 		{
-			if (Element == null)
-			{
-				return;
-			}
-
-			Color backgroundColor = Element.BackgroundColor;
-			if (backgroundColor.IsDefault)
-			{
-				if (SupportBackgroundTintList != null)
-				{
-					Context context = Context;
-					int id = GlobalResource.Attribute.ButtonTint;
-					unchecked
-					{
-						using (var value = new TypedValue())
-						{
-							try
-							{
-								Resources.Theme theme = context.Theme;
-								if (theme != null && theme.ResolveAttribute(id, value, true))
-#pragma warning disable 618
-								{
-									SupportBackgroundTintList = Resources.GetColorStateList(value.Data);
-								}
-#pragma warning restore 618
-								else
-								{
-									SupportBackgroundTintList = new ColorStateList(ColorExtensions.States,
-										new[] { (int)0xffd7d6d6, 0x7fd7d6d6 });
-								}
-							}
-							catch (Exception ex)
-							{
-								Internals.Log.Warning("Xamarin.Forms.Platform.Android.ButtonRenderer",
-									"Could not retrieve button background resource: {0}", ex);
-								SupportBackgroundTintList = new ColorStateList(ColorExtensions.States,
-									new[] { (int)0xffd7d6d6, 0x7fd7d6d6 });
-							}
-						}
-					}
-				}
-			}
-			else
-			{
-				int intColor = backgroundColor.ToAndroid().ToArgb();
-				int disableColor = backgroundColor.MultiplyAlpha(0.5).ToAndroid().ToArgb();
-				SupportBackgroundTintList = new ColorStateList(ColorExtensions.States, new[] { intColor, disableColor });
-			}
+			_backgroundTracker?.UpdateBackgroundColor();
 		}
 
-		internal virtual void OnNativeFocusChanged(bool hasFocus)
+		internal void OnNativeFocusChanged(bool hasFocus)
 		{
 		}
 
-		internal virtual void SendVisualElementInitialized(VisualElement element, AView nativeView)
+		internal void SendVisualElementInitialized(VisualElement element, AView nativeView)
 		{
 			element.SendViewInitialized(nativeView);
 		}
 
 		void Initialize()
 		{
-			// Fixes issues with AppCompatButton elevation (z-index) 
-			if (Forms.IsLollipopOrNewer)
-				StateListAnimator = null;
-
 			SoundEffectsEnabled = false;
 			SetOnClickListener(this);
 			SetOnTouchListener(this);
 			AddOnAttachStateChangeListener(this);
 			OnFocusChangeListener = this;
 
-			Tag = this; 
-        }
+			Tag = this;
+		}
 
 		void UpdateBitmap()
 		{
-			if (Element == null)
+			if (Element == null || _isDisposed)
 			{
 				return;
 			}
@@ -421,7 +380,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		void UpdateFont()
 		{
-			if (Element == null)
+			if (Element == null || _isDisposed)
 			{
 				return;
 			}
@@ -453,17 +412,27 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		void UpdateIsEnabled()
 		{
+			if (Element == null || _isDisposed)
+			{
+				return;
+			}
+
 			Enabled = Element.IsEnabled;
 		}
 
-	    void UpdateInputTransparent()
-	    {
-	        _inputTransparent = Element.InputTransparent;
-	    }
-
-	    void UpdateText()
+		void UpdateInputTransparent()
 		{
-			if (Element == null)
+			if (Element == null || _isDisposed)
+			{
+				return;
+			}
+
+			_inputTransparent = Element.InputTransparent;
+		}
+
+		void UpdateText()
+		{
+			if (Element == null || _isDisposed)
 			{
 				return;
 			}
@@ -480,12 +449,18 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		void UpdateTextColor()
 		{
-			if (Element == null)
+			if (Element == null || _isDisposed)
 			{
 				return;
 			}
 
 			_textColorSwitcher.Value.UpdateTextColor(this, Button.TextColor);
 		}
+
+		void UpdateDrawable()
+		{
+			_backgroundTracker?.UpdateDrawable();
+		}
+
 	}
 }

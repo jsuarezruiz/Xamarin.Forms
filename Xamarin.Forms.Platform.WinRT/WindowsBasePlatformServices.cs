@@ -78,6 +78,10 @@ namespace Xamarin.Forms.Platform.WinRT
 			if (!assemblies.Contains(thisAssembly))
 				assemblies.Add(thisAssembly);
 
+			Assembly xamlAssembly = typeof(Xamarin.Forms.Xaml.IMarkupExtension).GetTypeInfo().Assembly;
+			if (!assemblies.Contains(xamlAssembly))
+				assemblies.Add(xamlAssembly);
+
 			return assemblies.ToArray();
 		}
 
@@ -137,6 +141,11 @@ namespace Xamarin.Forms.Platform.WinRT
 				if (!result)
 					timer.Stop();
 			};
+		}
+
+		public void QuitApplication()
+		{
+			Log.Warning(nameof(WindowsBasePlatformServices), "Platform doesn't implement QuitApp");
 		}
 	}
 }

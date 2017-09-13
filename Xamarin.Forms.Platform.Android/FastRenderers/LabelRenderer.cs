@@ -9,7 +9,7 @@ using AView = Android.Views.View;
 
 namespace Xamarin.Forms.Platform.Android.FastRenderers
 {
-	public class LabelRenderer : FormsTextView, IVisualElementRenderer
+	internal sealed class LabelRenderer : FormsTextView, IVisualElementRenderer
 	{
 		int? _defaultLabelFor;
 		bool _disposed;
@@ -43,7 +43,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		ViewGroup IVisualElementRenderer.ViewGroup => null;
 
-		protected Label Element
+		Label Element
 		{
 			get { return _element; }
 			set
@@ -152,6 +152,9 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 				if (Element != null)
 				{
 					Element.PropertyChanged -= OnElementPropertyChanged;
+
+					if (Platform.GetRenderer(Element) == this)
+						Element.ClearValue(Platform.RendererProperty);
 				}
 			}
 
@@ -166,7 +169,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
             return handled ? result : base.OnTouchEvent(e);
         }
 
-        protected virtual void OnElementChanged(ElementChangedEventArgs<Label> e)
+        void OnElementChanged(ElementChangedEventArgs<Label> e)
 		{
 			ElementChanged?.Invoke(this, new VisualElementChangedEventArgs(e.OldElement, e.NewElement));
 
@@ -177,6 +180,8 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 			if (e.NewElement != null)
 			{
+				this.EnsureId();
+
 				if (_visualElementTracker == null)
 				{
 					_visualElementTracker = new VisualElementTracker(this);
@@ -194,7 +199,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 			}
 		}
 
-		protected virtual void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
+		void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			ElementPropertyChanged?.Invoke(this, e);
 
@@ -255,34 +260,7 @@ namespace Xamarin.Forms.Platform.Android.FastRenderers
 
 		void UpdateLineBreakMode()
 		{
-			SetSingleLine(false);
-			switch (Element.LineBreakMode)
-			{
-				case LineBreakMode.NoWrap:
-					SetMaxLines(1);
-					Ellipsize = null;
-					break;
-				case LineBreakMode.WordWrap:
-					Ellipsize = null;
-					SetMaxLines(100);
-					break;
-				case LineBreakMode.CharacterWrap:
-					Ellipsize = null;
-					SetMaxLines(100);
-					break;
-				case LineBreakMode.HeadTruncation:
-					SetMaxLines(1);
-					Ellipsize = TextUtils.TruncateAt.Start;
-					break;
-				case LineBreakMode.TailTruncation:
-					SetMaxLines(1);
-					Ellipsize = TextUtils.TruncateAt.End;
-					break;
-				case LineBreakMode.MiddleTruncation:
-					SetMaxLines(1);
-					Ellipsize = TextUtils.TruncateAt.Middle;
-					break;
-			}
+			this.SetLineBreakMode(Element.LineBreakMode);
 			_lastSizeRequest = null;
 		}
 

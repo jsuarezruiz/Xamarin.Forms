@@ -397,5 +397,8 @@
       <Link>Images\Vegetables%402x.jpg</Link>
     </BundleResource>
   </ItemGroup>
+  <ItemGroup>
+    <InterfaceDefinition Include="Main.storyboard" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Mac\Xamarin.Mac.CSharp.targets" />
 </Project>

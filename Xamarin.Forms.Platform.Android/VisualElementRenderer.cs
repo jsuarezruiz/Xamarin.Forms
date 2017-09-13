@@ -93,7 +93,9 @@ namespace Xamarin.Forms.Platform.Android
 		public override bool OnInterceptTouchEvent(MotionEvent ev)
 		{
 			if (!Element.IsEnabled || (Element.InputTransparent && Element.IsEnabled))
+			{
 				return true;
+			}
 
 			return base.OnInterceptTouchEvent(ev);
 		}
@@ -125,6 +127,8 @@ namespace Xamarin.Forms.Platform.Android
 			// It's very important that the gesture detection happen first here
 			// if we check handled first, we might short-circuit and never check for tap/pan
 			handled = _gestureDetector.Value.OnTouchEvent(e) || handled;
+
+			v.EnsureLongClickCancellation(e, handled, Element);
 
 			return handled;
 		}
@@ -366,7 +370,7 @@ namespace Xamarin.Forms.Platform.Android
 			if (_defaultContentDescription == null)
 				_defaultContentDescription = ContentDescription;
 
-			var elemValue = string.Join(" ", (string)Element.GetValue(AutomationProperties.NameProperty), (string)Element.GetValue(AutomationProperties.HelpTextProperty));
+			var elemValue = FastRenderers.AutomationPropertiesProvider.ConcatenateNameAndHelpText(Element);
 
 			if (!string.IsNullOrWhiteSpace(elemValue))
 				ContentDescription = elemValue;
@@ -401,7 +405,7 @@ namespace Xamarin.Forms.Platform.Android
 			if (_defaultHint == null)
 				_defaultHint = textView.Hint;
 
-			var elemValue = string.Join((String.IsNullOrWhiteSpace((string)(Element.GetValue(AutomationProperties.NameProperty))) || String.IsNullOrWhiteSpace((string)(Element.GetValue(AutomationProperties.HelpTextProperty)))) ? "" : ". ", (string)Element.GetValue(AutomationProperties.NameProperty), (string)Element.GetValue(AutomationProperties.HelpTextProperty));
+			var elemValue = FastRenderers.AutomationPropertiesProvider.ConcatenateNameAndHelpText(Element);
 
 			if (!string.IsNullOrWhiteSpace(elemValue))
 				textView.Hint = elemValue;

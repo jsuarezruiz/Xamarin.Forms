@@ -868,24 +868,28 @@ namespace Xamarin.Forms.Platform.Android
 			Color navigationBarTextColor = CurrentNavigationPage == null ? Color.Default : CurrentNavigationPage.BarTextColor;
 			TextView actionBarTitleTextView = null;
 
-			if(Forms.IsLollipopOrNewer)
+			if (Forms.IsLollipopOrNewer)
 			{
 				int actionbarId = _context.Resources.GetIdentifier("action_bar", "id", "android");
-				if(actionbarId > 0)
+				if (actionbarId > 0)
 				{
-					Toolbar toolbar = (Toolbar)((Activity)_context).FindViewById(actionbarId);
-					
-					for( int i = 0; i < toolbar.ChildCount; i++ )
+					var toolbar = ((Activity)_context).FindViewById(actionbarId) as ViewGroup;
+					if (toolbar != null)
 					{
-						if( toolbar.GetChildAt(i) is TextView )
+						for (int i = 0; i < toolbar.ChildCount; i++)
 						{
-							actionBarTitleTextView = (TextView)toolbar.GetChildAt(i);
-							break;
+							var textView = toolbar.GetChildAt(i) as TextView;
+							if (textView != null)
+							{
+								actionBarTitleTextView = textView;
+								break;
+							}
 						}
 					}
 				}
 			}
-			else
+
+			if (actionBarTitleTextView == null)
 			{
 				int actionBarTitleId = _context.Resources.GetIdentifier("action_bar_title", "id", "android");
 				if (actionBarTitleId > 0)
@@ -1052,17 +1056,63 @@ namespace Xamarin.Forms.Platform.Android
 			}
 		}
 
+		internal static int GenerateViewId()
+		{
+			// getting unique Id's is an art, and I consider myself the Jackson Pollock of the field
+			if ((int)Build.VERSION.SdkInt >= 17)
+				return global::Android.Views.View.GenerateViewId();
+
+			// Numbers higher than this range reserved for xml
+			// If we roll over, it can be exceptionally problematic for the user if they are still retaining things, android's internal implementation is
+			// basically identical to this except they do a lot of locking we don't have to because we know we only do this
+			// from the UI thread
+			if (s_id >= 0x00ffffff)
+				s_id = 0x00000400;
+			return s_id++;
+		}
+
+		static int s_id = 0x00000400;
+
 		internal class DefaultRenderer : VisualElementRenderer<View>
 		{
 			bool _notReallyHandled;
+			Dictionary<int, float> _minimumElevation = new Dictionary<int, float>();
+
+			public DefaultRenderer()
+			{
+				ChildrenDrawingOrderEnabled = true;
+			}
+
+			readonly MotionEventHelper _motionEventHelper = new MotionEventHelper();
+
 			internal void NotifyFakeHandling()
 			{
 				_notReallyHandled = true;
 			}
 
+			internal void InvalidateMinimumElevation()
+			{
+				_minimumElevation = new Dictionary<int, float>();
+			}
+
+			public override bool OnTouchEvent(MotionEvent e)
+			{
+				if (base.OnTouchEvent(e))
+					return true;
+
+				return _motionEventHelper.HandleMotionEvent(Parent, e);
+			}
+
+			protected override void OnElementChanged(ElementChangedEventArgs<View> e)
+			{
+				base.OnElementChanged(e);
+
+				_motionEventHelper.UpdateElement(e.NewElement);
+			}
+
 			public override bool DispatchTouchEvent(MotionEvent e)
 			{
-				#region
+				#region Excessive explanation
 				// Normally dispatchTouchEvent feeds the touch events to its children one at a time, top child first,
 				// (and only to the children in the hit-test area of the event) stopping as soon as one of them has handled
 				// the event. 
@@ -1095,11 +1145,35 @@ namespace Xamarin.Forms.Platform.Android
 					// don't consider the event truly "handled" yet. 
 					// Since a child control short-circuited the normal dispatchTouchEvent stuff, this layout never got the chance for
 					// IOnTouchListener.OnTouch and the OnTouchEvent override to try handling the touches; we'll do that now
-
 					return OnTouchEvent(e);
 				}
 
 				return result;
+			}
+
+			protected override int GetChildDrawingOrder(int childCount, int i)
+			{
+				//On Material design the button states use Elevation property, we need to make sure
+				//we update the elevation of other controls to be over the previous one
+				if (Forms.IsLollipopOrNewer)
+				{
+					if (!_minimumElevation.ContainsKey(i))
+					{
+						_minimumElevation[i] = GetChildAt(i).Elevation;
+					}
+						
+					for (int j = 0; j < _minimumElevation.Count() - 1; j++)
+					{
+						while (_minimumElevation[j] > _minimumElevation[j + 1])
+						{
+							_minimumElevation[j + 1] = _minimumElevation[j] + 1;
+							GetChildAt(j + 1).Elevation = _minimumElevation[j + 1];
+						}
+						if (j == i)
+							break;
+					}
+				}
+				return base.GetChildDrawingOrder(childCount, i);
 			}
 		}
 

@@ -922,7 +922,6 @@
     <EmbeddedResource Include="Issues\Bz58922.xaml">
       <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
     </EmbeddedResource>
-	</ItemGroup>
     <EmbeddedResource Include="Issues\Bz55862.xaml">
       <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
     </EmbeddedResource>

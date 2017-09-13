@@ -10,6 +10,7 @@ using Mono.Cecil.Rocks;
 
 using Xamarin.Forms.Internals;
 using Xamarin.Forms.Xaml;
+using Xamarin.Forms.Build.Tasks;
 
 namespace Xamarin.Forms.Build.Tasks
 {
@@ -960,8 +961,8 @@ namespace Xamarin.Forms.Build.Tasks
 			var property = parent.VariableType.GetProperty(pd => pd.Name == localName, out declaringTypeReference);
 			if (property == null)
 				return false;
-			var propertyType = property.ResolveGenericPropertyType(declaringTypeReference);
-			var propertySetter = property.SetMethod;
+			var propertyType = property.ResolveGenericPropertyType(declaringTypeReference, module);
+            var propertySetter = property.SetMethod;
 			if (propertySetter == null || !propertySetter.IsPublic || propertySetter.IsStatic)
 				return false;
 
@@ -974,7 +975,6 @@ namespace Xamarin.Forms.Build.Tasks
 				return false;
 
 			var vardef = context.Variables [elementNode];
-			var propertyType = property.ResolveGenericPropertyType(declaringTypeReference, module);
 			var implicitOperator = vardef.VariableType.GetImplicitOperatorTo(propertyType, module);
 
 			if (implicitOperator != null)

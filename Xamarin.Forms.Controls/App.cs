@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
+using Xamarin.Forms.Controls.Issues;
 using Xamarin.Forms.Internals;
 using Xamarin.Forms.PlatformConfiguration;
 using Xamarin.Forms.PlatformConfiguration.WindowsSpecific;
@@ -47,12 +48,7 @@ namespace Xamarin.Forms.Controls
 
         public Page CreateDefaultMainPage()
         {
-            return new MasterDetailPage
-            {
-                AutomationId = DefaultMainPageId,
-                Master = new ContentPage { Icon = "gtk_hamburguer_button.png", Title = "Master", BackgroundColor = Color.Red },
-                Detail = CoreGallery.GetMainPage()
-            };
+            return new DesktopSupportTestPage();
         }
 
         protected override void OnAppLinkRequestReceived(Uri uri)

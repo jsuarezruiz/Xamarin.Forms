@@ -236,7 +236,7 @@ namespace Xamarin.Forms.Platform.GTK
                 ToolButton secondaryButton = ToolButtonHelper.CreateToolButton(Stock.Add);
                 _toolbarSection.PackStart(secondaryButton, false, false, 0);
 
-                Menu menu = new Menu();
+                Gtk.Menu menu = new Gtk.Menu();
                 foreach (var secondaryToolBarItem in secondaryToolBarItems)
                 {
                     Gtk.MenuItem menuItem = new Gtk.MenuItem(secondaryToolBarItem.Text);

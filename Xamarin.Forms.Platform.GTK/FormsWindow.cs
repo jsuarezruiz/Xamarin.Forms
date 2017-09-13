@@ -2,12 +2,15 @@
 using System;
 using System.ComponentModel;
 using System.Threading;
+using Xamarin.Forms.Platform.GTK.Extensions;
 
 namespace Xamarin.Forms.Platform.GTK
 {
     public class FormsWindow : Window
     {
         private Application _application;
+        private MenuBar _menuBar;
+        private Gtk.Menu _menu;
         private Gdk.Size _lastSize;
 
         public FormsWindow()
@@ -74,9 +77,9 @@ namespace Xamarin.Forms.Platform.GTK
         private void ApplicationOnPropertyChanged(object sender, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == nameof(Application.MainPage))
-            {
                 UpdateMainPage();
-            }
+            if (args.PropertyName == nameof(Menu))
+                UpdateMainPage();
         }
 
         protected override bool OnConfigureEvent(Gdk.EventConfigure evnt)
@@ -108,8 +111,21 @@ namespace Xamarin.Forms.Platform.GTK
 
             var platform = new Platform();
             platform.PlatformRenderer.SetSizeRequest(WidthRequest, HeightRequest);
-            Add(platform.PlatformRenderer);
+
+            _menuBar = new MenuBar();
+            _menu = new Gtk.Menu();
+
+            VBox vbox = new VBox(false, 0);
+            vbox.PackStart(_menuBar, false, false, 0);
+            vbox.PackStart(platform.PlatformRenderer, true, true, 0);
+            Add(vbox);
+            
             platform.SetPage(_application.MainPage);
+
+            var mainMenu = Element.GetMenu(_application);
+
+            if (mainMenu != null)
+                SetMainMenu(mainMenu);
 
             Child.ShowAll();
         }
@@ -133,6 +149,18 @@ namespace Xamarin.Forms.Platform.GTK
             {
                 _application.PropertyChanged -= ApplicationOnPropertyChanged;
             }
+        }
+
+        private void SetMainMenu(Menu mainMenu)
+        {
+            mainMenu.PropertyChanged += MainMenuOnPropertyChanged;
+            MainMenuOnPropertyChanged(this, null);
+        }
+
+        private void MainMenuOnPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // TODO:
+            Element.GetMenu(_application).ToGtkMenu();
         }
     }
 }

@@ -142,6 +142,7 @@
     <Compile Include="Extensions\GtkRectangleExtensions.cs" />
     <Compile Include="Extensions\ImageExtensions.cs" />
     <Compile Include="Extensions\LabelExtensions.cs" />
+    <Compile Include="Extensions\MenuExtensions.cs" />
     <Compile Include="Extensions\PageExtensions.cs" />
     <Compile Include="Extensions\VisualElementExtensions.cs" />
     <Compile Include="Extensions\WidgetExtensions.cs" />

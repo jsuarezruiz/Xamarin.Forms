@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
 using WControl = System.Windows.Controls.Control;
 
 namespace Xamarin.Forms.Platform.WPF
@@ -28,6 +22,9 @@ namespace Xamarin.Forms.Platform.WPF
 		readonly List<EventHandler<VisualElementChangedEventArgs>> _elementChangedHandlers =
 			new List<EventHandler<VisualElementChangedEventArgs>>();
 
+		string _defaultAutomationPropertiesName;
+		string _defaultAutomationPropertiesHelpText;
+		UIElement _defaultAutomationPropertiesLabeledBy;
 		VisualElementTracker _tracker;
 
 		IElementController ElementController => Element as IElementController;
@@ -142,6 +139,62 @@ namespace Xamarin.Forms.Platform.WPF
 				UpdateBackground();
 			else if (e.PropertyName == View.HorizontalOptionsProperty.PropertyName || e.PropertyName == View.VerticalOptionsProperty.PropertyName)
 				UpdateAlignment();
+			else if (e.PropertyName == AutomationProperties.HelpTextProperty.PropertyName)
+				SetAutomationPropertiesHelpText();
+			else if (e.PropertyName == AutomationProperties.NameProperty.PropertyName)
+				SetAutomationPropertiesName();
+			else if (e.PropertyName == AutomationProperties.LabeledByProperty.PropertyName)
+				SetAutomationPropertiesLabeledBy();
+		}
+
+		protected virtual void SetAutomationPropertiesHelpText()
+		{
+			if (Element == null || Control == null)
+				return;
+
+			if (_defaultAutomationPropertiesHelpText == null)
+				_defaultAutomationPropertiesHelpText = (string)Control.GetValue(System.Windows.Automation.AutomationProperties.HelpTextProperty);
+
+			var elemValue = (string)Element.GetValue(AutomationProperties.HelpTextProperty);
+
+			if (!string.IsNullOrWhiteSpace(elemValue))
+				Control.SetValue(System.Windows.Automation.AutomationProperties.HelpTextProperty, elemValue);
+			else
+				Control.SetValue(System.Windows.Automation.AutomationProperties.HelpTextProperty, _defaultAutomationPropertiesHelpText);
+		}
+
+		protected virtual void SetAutomationPropertiesName()
+		{
+			if (Element == null || Control == null)
+				return;
+
+			if (_defaultAutomationPropertiesName == null)
+				_defaultAutomationPropertiesName = (string)Control.GetValue(System.Windows.Automation.AutomationProperties.NameProperty);
+
+			var elemValue = (string)Element.GetValue(AutomationProperties.NameProperty);
+
+			if (!string.IsNullOrWhiteSpace(elemValue))
+				Control.SetValue(System.Windows.Automation.AutomationProperties.NameProperty, elemValue);
+			else
+				Control.SetValue(System.Windows.Automation.AutomationProperties.NameProperty, _defaultAutomationPropertiesName);
+		}
+
+		protected virtual void SetAutomationPropertiesLabeledBy()
+		{
+			if (Element == null || Control == null)
+				return;
+
+			if (_defaultAutomationPropertiesLabeledBy == null)
+				_defaultAutomationPropertiesLabeledBy = (UIElement)Control.GetValue(System.Windows.Automation.AutomationProperties.LabeledByProperty);
+
+			var elemValue = (VisualElement)Element.GetValue(AutomationProperties.LabeledByProperty);
+			var renderer = Platform.GetOrCreateRenderer(elemValue);
+			var nativeElement = renderer?.GetNativeElement();
+
+			if (nativeElement != null)
+				Control.SetValue(System.Windows.Automation.AutomationProperties.LabeledByProperty, nativeElement);
+			else
+				Control.SetValue(System.Windows.Automation.AutomationProperties.LabeledByProperty, _defaultAutomationPropertiesLabeledBy);
 		}
 
 		protected virtual void OnGotFocus(object sender, RoutedEventArgs args)
@@ -213,6 +266,9 @@ namespace Xamarin.Forms.Platform.WPF
 		protected virtual void UpdateNativeWidget()
 		{
 			UpdateEnabled();
+			SetAutomationPropertiesHelpText();
+			SetAutomationPropertiesName();
+			SetAutomationPropertiesLabeledBy();
 		}
 
 		internal virtual void OnModelFocusChangeRequested(object sender, VisualElement.FocusRequestArgs args)

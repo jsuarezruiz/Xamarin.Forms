@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
@@ -145,6 +144,8 @@ namespace Xamarin.Forms.Platform.WPF
 		{
 			Console.WriteLine("WebBrowserOnNavigated");
 
+			HideJsScriptErrors((WebBrowser)sender);
+
 			string url = navigationEventArgs.Uri.IsAbsoluteUri ? navigationEventArgs.Uri.AbsoluteUri : navigationEventArgs.Uri.OriginalString;
 		  	SendNavigated(new UrlWebViewSource { Url = url }, _eventState, WebNavigationResult.Success);
 
@@ -198,6 +199,26 @@ namespace Xamarin.Forms.Platform.WPF
 
 			_isDisposed = true;
 			base.Dispose(disposing);
+		}
+
+		private void HideJsScriptErrors(WebBrowser wb)
+		{
+			// IWebBrowser2 interface
+			// Exposes methods that are implemented by the WebBrowser control 
+			// Searches for the specified field, using the specified binding constraints.
+			FieldInfo fld = typeof(WebBrowser).GetField("_axIWebBrowser2", BindingFlags.Instance | BindingFlags.NonPublic);
+
+			if (fld == null)
+				return;
+
+			object obj = fld.GetValue(wb);
+
+			if (obj == null)
+				return;
+
+			// Silent: Sets or gets a value that indicates whether the object can display dialog boxes.
+			// HRESULT IWebBrowser2::get_Silent(VARIANT_BOOL *pbSilent);HRESULT IWebBrowser2::put_Silent(VARIANT_BOOL bSilent);
+			obj.GetType().InvokeMember("Silent", BindingFlags.SetProperty, null, obj, new object[] { true });
 		}
 	}
 }

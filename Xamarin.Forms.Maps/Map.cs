@@ -10,6 +10,43 @@ namespace Xamarin.Forms.Maps
 {
 	public class Map : View, IEnumerable<Pin>
 	{
+		public static readonly BindableProperty PinsSourceProperty = BindableProperty.Create(nameof(PinsSource), typeof(ObservableCollection<Pin>), typeof(Map), default(ObservableCollection<Pin>), propertyChanged: (bindable, oldvalue, newvalue) =>
+		{
+			if (newvalue != null)
+			{
+				var map = (Map)bindable;
+				var pins = (ObservableCollection<Pin>)newvalue;
+
+				foreach (var pin in pins)
+					map.Pins.Add(pin);
+
+				pins.CollectionChanged += (sender, e) =>
+				{
+					Device.BeginInvokeOnMainThread(() =>
+					{
+						switch (e.Action)
+						{
+							case NotifyCollectionChangedAction.Add:
+							case NotifyCollectionChangedAction.Replace:
+							case NotifyCollectionChangedAction.Remove:
+								if (e.OldItems != null)
+									foreach (var item in e.OldItems)
+										map.Pins.Remove((Pin)item);
+								if (e.NewItems != null)
+									foreach (var item in e.NewItems)
+										map.Pins.Add((Pin)item);
+								break;
+							case NotifyCollectionChangedAction.Reset:
+								map.Pins.Clear();
+								break;
+						}
+					});
+				};
+			}
+		});
+
+		public static readonly BindableProperty PinTemplateProperty = BindableProperty.Create(nameof(PinTemplate), typeof(DataTemplate), typeof(Map));
+
 		public static readonly BindableProperty MapTypeProperty = BindableProperty.Create("MapType", typeof(MapType), typeof(Map), default(MapType));
 
 		public static readonly BindableProperty IsShowingUserProperty = BindableProperty.Create("IsShowingUser", typeof(bool), typeof(Map), default(bool));
@@ -33,6 +70,18 @@ namespace Xamarin.Forms.Maps
 		// center on Rome by default
 		public Map() : this(new MapSpan(new Position(41.890202, 12.492049), 0.1, 0.1))
 		{
+		}
+
+		public ObservableCollection<Pin> PinsSource
+		{
+			get { return (ObservableCollection<Pin>)GetValue(PinsSourceProperty); }
+			set { SetValue(PinsSourceProperty, value); }
+		}
+
+		public DataTemplate PinTemplate
+		{
+			get { return (DataTemplate)GetValue(PinTemplateProperty); }
+			set { SetValue(PinTemplateProperty, value); }
 		}
 
 		public bool HasScrollEnabled
